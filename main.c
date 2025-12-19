@@ -1,7 +1,11 @@
 #define UNICODE
 #include <windows.h>
 #include <shellapi.h>
+#include <psapi.h>
 #include "resource.h"
+#include <stdio.h>
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
 
 #define WM_TRAYICON (WM_USER + 1)
 #define ID_TRAY_EXIT 1001
@@ -10,12 +14,37 @@
 
 HWND hSettingsWnd = NULL;
 HINSTANCE g_hInstance = NULL;
+HWND hTab = NULL;
+HWND hPagePC = NULL;
+HWND hPageApps = NULL;
 
 void OpenSettingsWindow(HINSTANCE hInstance, HWND hwndParent);
 
 
 
 NOTIFYICONDATA nid = {};
+
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
+    HWND hList = (HWND)lParam;
+    DWORD pid;
+    GetWindowThreadProcessId(hwnd, &pid);
+
+
+
+    if (IsWindowVisible(hwnd)) {
+        TCHAR title[256];
+        GetWindowText(hwnd, title, sizeof(title)/sizeof(TCHAR));
+        if (title[0] != 0) {
+            SendMessage(hList, LB_ADDSTRING, 0, (LPARAM)title);
+        }
+    }
+
+    return TRUE;
+}
+
+void ListRunningApps() {
+    EnumWindows(EnumWindowsProc, 0);
+}
 
 LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -25,7 +54,21 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_DESTROY:
             hSettingsWnd = NULL;
             break;
+        case WM_NOTIFY:
+            if (((LPNMHDR)lParam)->code == TCN_SELCHANGE) {
+                int iPage = TabCtrl_GetCurSel(hTab);
+                
+                if (iPage == 0) { 
+                    ShowWindow(hPagePC, SW_SHOW);
+                    ShowWindow(hPageApps, SW_HIDE);
+                } else { 
+                    ShowWindow(hPagePC, SW_HIDE);
+                    ShowWindow(hPageApps, SW_SHOW);
+                }
+            }
+            break;
         case WM_COMMAND:
+
             // Add a function here that gets all of the parameters for the app
             // we want things like you can add hot key shortcuts to global space or app specific
             // we also want a visualization of all current bound keys per app
@@ -91,6 +134,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 void OpenSettingsWindow(HINSTANCE hInstance, HWND hwndParent) {
     if (hSettingsWnd != NULL) {
+
         SetForegroundWindow(hSettingsWnd);
         return;
     }
@@ -110,26 +154,100 @@ void OpenSettingsWindow(HINSTANCE hInstance, HWND hwndParent) {
         CLASS_NAME,
         L"Settings",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-        200, 200, 300, 150,
+        400, 400, 700, 750,
         hwndParent,
         NULL,
         hInstance,
         NULL
     );
 
+    HWND hTab = CreateWindowEx(
+    0,
+    WC_TABCONTROL,
+    NULL,
+    WS_CHILD | WS_VISIBLE,
+    5, 5, 300, 200,
+    hSettingsWnd,
+    (HMENU)4001,
+    hInstance,
+    NULL
+);
+
+//     HWND hList = CreateWindowEx(
+//     0,
+//     L"LISTBOX",
+//     NULL,
+//     WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_STANDARD,
+//     10, 10, 520, 450,
+//     hSettingsWnd,
+//     (HMENU)3001,
+//     hInstance,
+//     NULL
+// );
+
+    RECT rcClient;
+    GetClientRect(hTab, &rcClient);
+
+    HWND hPagePC = CreateWindowEx(
+        0,
+        L"STATIC",
+        L"PC Info Here",
+        WS_CHILD | WS_VISIBLE,
+        rcClient.left + 20, rcClient.top + 20, rcClient.right, rcClient.bottom,
+        hSettingsWnd,
+        NULL,
+        hInstance,
+        NULL
+    );
+
+    // HWND hPageApps = CreateWindowEx(
+    //     0,
+    //     L"LISTBOX",
+    //     NULL,
+    //     WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_STANDARD,
+    //     rcClient.left, rcClient.top, rcClient.right, rcClient.bottom,
+    //     hSettingsWnd,
+    //     (HMENU)3001, 
+    //     hInstance,
+    //     NULL
+    // );
+
+
+
+
+    TCITEM tie;
+    tie.mask = TCIF_TEXT;
+
+    tie.pszText = L"PC";
+    TabCtrl_InsertItem(hTab, 0, &tie);
+
+    tie.pszText = L"Current Apps";
+    TabCtrl_InsertItem(hTab, 1, &tie);
+
+
+
+
+    // SendMessage(hList, LB_RESETCONTENT, 0, 0);
+    EnumWindows(EnumWindowsProc, (LPARAM)hPageApps);
     if (hSettingsWnd) {
         ShowWindow(hSettingsWnd, SW_SHOW);
+
+
+
         UpdateWindow(hSettingsWnd);
     }
 }
 
 
 int WINAPI WinMain(
+
     HINSTANCE hInstance,
     HINSTANCE hPrevInstance,
     LPSTR lpCmdLine,
     int nCmdShow
 ) {
+  
+
     const wchar_t CLASS_NAME[] = L"TrayAppClass";
     g_hInstance = hInstance;
 
@@ -160,7 +278,8 @@ int WINAPI WinMain(
     HWND hwnd = CreateWindowEx(
     0,
     CLASS_NAME,
-    L"",
+    L"LISTBOX",
+
     WS_OVERLAPPEDWINDOW,
     0, 0, 0, 0,
     NULL,
@@ -168,6 +287,7 @@ int WINAPI WinMain(
     hInstance,
     NULL
 );
+
     HWND hSettingsWnd = CreateWindowEx(
     0,
     L"STATIC",
@@ -178,7 +298,7 @@ int WINAPI WinMain(
     NULL,
     hInstance,
     NULL
-);
+    );
 
 
     nid.cbSize = sizeof(NOTIFYICONDATA);
