@@ -1,11 +1,7 @@
 #define UNICODE
 #include <windows.h>
-#include <shellapi.h>
-#include <psapi.h>
 #include "resource.h"
-#include <stdio.h>
 #include <commctrl.h>
-#pragma comment(lib, "comctl32.lib")
 
 #define WM_TRAYICON (WM_USER + 1)
 #define ID_TRAY_EXIT 1001
@@ -57,11 +53,11 @@ LRESULT CALLBACK SettingsWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_NOTIFY:
             if (((LPNMHDR)lParam)->code == TCN_SELCHANGE) {
                 int iPage = TabCtrl_GetCurSel(hTab);
-                
-                if (iPage == 0) { 
+
+                if (iPage == 0) {
                     ShowWindow(hPagePC, SW_SHOW);
                     ShowWindow(hPageApps, SW_HIDE);
-                } else { 
+                } else {
                     ShowWindow(hPagePC, SW_HIDE);
                     ShowWindow(hPageApps, SW_SHOW);
                 }
@@ -173,44 +169,10 @@ void OpenSettingsWindow(HINSTANCE hInstance, HWND hwndParent) {
     NULL
 );
 
-//     HWND hList = CreateWindowEx(
-//     0,
-//     L"LISTBOX",
-//     NULL,
-//     WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_STANDARD,
-//     10, 10, 520, 450,
-//     hSettingsWnd,
-//     (HMENU)3001,
-//     hInstance,
-//     NULL
-// );
-
     RECT rcClient;
     GetClientRect(hTab, &rcClient);
 
-    HWND hPagePC = CreateWindowEx(
-        0,
-        L"STATIC",
-        L"PC Info Here",
-        WS_CHILD | WS_VISIBLE,
-        rcClient.left + 20, rcClient.top + 20, rcClient.right, rcClient.bottom,
-        hSettingsWnd,
-        NULL,
-        hInstance,
-        NULL
-    );
 
-    // HWND hPageApps = CreateWindowEx(
-    //     0,
-    //     L"LISTBOX",
-    //     NULL,
-    //     WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_STANDARD,
-    //     rcClient.left, rcClient.top, rcClient.right, rcClient.bottom,
-    //     hSettingsWnd,
-    //     (HMENU)3001, 
-    //     hInstance,
-    //     NULL
-    // );
 
 
 
@@ -246,7 +208,7 @@ int WINAPI WinMain(
     LPSTR lpCmdLine,
     int nCmdShow
 ) {
-  
+
 
     const wchar_t CLASS_NAME[] = L"TrayAppClass";
     g_hInstance = hInstance;
